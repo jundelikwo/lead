@@ -15,6 +15,10 @@ async function analysis() {
     let noOfDriversWithMoreThanOneVehicle = 0;
     let mostTripsByDriver, highestEarningDriver;
     let drivers = {};
+    let mostTrips = 0;
+    let driverWithMostTripsId;
+    let highestEarnings = 0;
+    let driverWithHighestEarningId;
     
     const trips = await getTrips();
 
@@ -31,22 +35,35 @@ async function analysis() {
 
         billedTotal += normalizedTripAmount;
 
+        let driver;
         // Checks to see if we have already come across this driver
         if(drivers.hasOwnProperty(trip.driverID)) {
             // We already have details about this driver in memory
             // Increment the driver noOfTrips and earning
 
-            const driver = drivers[trip.driverID];
+            driver = drivers[trip.driverID];
             driver.noOfTrips++;
             driver.earnings += normalizedTripAmount;
         } else {
             // First time seeing this driver
             // Create a new record for them
-
-            drivers[trip.driverID] = {
+            driver = {
                 noOfTrips: 1,
                 earnings: normalizedTripAmount,
             };
+
+            drivers[trip.driverID] = driver;
+        }
+
+        // Note in the trips api, two different drivers had the highest number of trips
+        if (driver.noOfTrips >= mostTrips) {
+            mostTrips = driver.noOfTrips;
+            driverWithMostTripsId = trip.driverID;
+        }
+
+        if (driver.earnings > highestEarnings) {
+            highestEarnings = driver.earnings;
+            driverWithHighestEarningId = trip.driverID;
         }
     });
 
@@ -56,8 +73,6 @@ async function analysis() {
     cashBilledTotal = normalizeAmount(cashBilledTotal.toFixed(2));
     nonCashBilledTotal = normalizeAmount(nonCashBilledTotal.toFixed(2));
 
-    let mostTrips = 0;
-    let highestEarnings = 0;
     await Promise.all(Object.keys(drivers).map(async (driverId) => {
         try {
             const driver = await getDriver(driverId);
@@ -68,9 +83,7 @@ async function analysis() {
 
             const {noOfTrips, earnings} = drivers[driverId];
 
-            // Note in the trips api, two different drivers had the highest number of trips
-            if (noOfTrips > mostTrips) {
-                mostTrips = noOfTrips;
+            if (driverId === driverWithMostTripsId) {
                 mostTripsByDriver = {
                     name: driver.name,
                     email: driver.email,
@@ -80,8 +93,7 @@ async function analysis() {
                 };
             }
 
-            if (earnings > highestEarnings) {
-                highestEarnings = earnings;
+            if (driverId === driverWithHighestEarningId) {
                 highestEarningDriver = {
                     name: driver.name,
                     email: driver.email,

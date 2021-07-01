@@ -14,13 +14,20 @@ async function driverReport() {
     trips.forEach(async (trip) => {
         const normalizedTripAmount = normalizeAmount(trip.billedAmount);
 
-        let tripDriver;
+        let driver;
+        // Checks to see if we have already come across this driver
         if(drivers.hasOwnProperty(trip.driverID)) {
-            tripDriver = drivers[trip.driverID];
-            tripDriver.noOfTrips++;
-            tripDriver.totalAmountEarned += normalizedTripAmount;
+            // We already have details about this driver in memory
+            // Increment the driver noOfTrips and earning
+
+            driver = drivers[trip.driverID];
+            driver.noOfTrips++;
+            driver.totalAmountEarned += normalizedTripAmount;
         } else {
-            tripDriver = {
+            // First time seeing this driver
+            // Create a new record for them
+
+            driver = {
                 id: trip.driverID,
                 noOfTrips: 1,
                 noOfCashTrips: 0,
@@ -32,18 +39,19 @@ async function driverReport() {
                 vehicles: [],
             };
 
-            drivers[trip.driverID] = tripDriver;
+            drivers[trip.driverID] = driver;
         }
 
         if(trip.isCash) {
-            tripDriver.noOfCashTrips++;
-            tripDriver.totalCashAmount += normalizedTripAmount;
+            driver.noOfCashTrips++;
+            driver.totalCashAmount += normalizedTripAmount;
         } else {
-            tripDriver.noOfNonCashTrips++;
-            tripDriver.totalNonCashAmount += normalizedTripAmount;
+            driver.noOfNonCashTrips++;
+            driver.totalNonCashAmount += normalizedTripAmount;
         }
 
-        tripDriver.trips.push({
+        // Store details of the current trip into the driver object
+        driver.trips.push({
             user: trip.user.name,
             created: trip.created,
             pickup: trip.pickup.address,
@@ -63,15 +71,14 @@ async function driverReport() {
             item.fullName = driver.name;
             item.phone = driver.phone;
 
-            await Promise.all(driver.vehicleID.map(async (vehicleId) => {
+            for (let vehicleId of driver.vehicleID) {
                 const vehicle = await getVehicle(vehicleId);
                 item.vehicles.push({plate: vehicle.plate, manufacturer: vehicle.manufacturer});
-            }))
+            }
         } catch (error) {}
 
         return item;
     }))
-    console.log(driversArray)
     return driversArray;
 }
 
